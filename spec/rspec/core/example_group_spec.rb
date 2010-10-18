@@ -610,10 +610,16 @@ module RSpec::Core
             def name
               "John"
             end
+
+            def greetings(text)
+              "#{text} #{name}"
+            end
           end.new
         end
         its("name.size") { should == 4 }
         its("name.size.class") { should == Fixnum }
+        its(:greetings, "Hi") { should == "Hi John"}
+        its('clone.greetings', "Hello") { should == "Hello John"}
       end
 
       context "when it is a Hash" do

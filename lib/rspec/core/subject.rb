@@ -113,16 +113,18 @@ module RSpec
         #     its(:keys) { should include(:max_users) }
         #     its(:count) { should == 2 }
         #   end
-        def its(attribute, &block)
-          describe(attribute) do
+        def its(*attributes, &block)
+          describe("#{attributes.first} #{attributes.size > 1 ? "with arguments #{attributes[1..-1].map(&:inspect).join(', ')}" : ''}") do
             example do
               self.class.class_eval do
                 define_method(:subject) do
-                  if super().is_a?(Hash) && attribute.is_a?(Array)
-                    OpenStruct.new(super()).send(attribute.first)
+                  if super().is_a?(Hash) && attributes.first.is_a?(Array)
+                    OpenStruct.new(super()).send(attributes.first.first)
                   else
-                    attribute.to_s.split('.').inject(super()) do |target, method|
-                      target.send(method)
+                    method_chain = attributes.first.to_s.split('.')
+                    method_chain.inject(super()) do |target, method|
+                      method = [method, *attributes[1..-1]] if method_chain.last == method and attributes.size > 1
+                      target.send(*method)
                     end
                   end
                 end
@@ -132,6 +134,25 @@ module RSpec
           end
         end
 
+=begin
+        def its(*attributes, &block)
+          description = attributes.size == 1 ? attributes.first : (attributes.first.to_s + " with arguments " + attributes[1..-1].map(&:inspect).join(', '))
+          describe(description) do
+            example do
+              self.class.class_eval do
+                define_method(:subject) do
+                  if super.is_a?(Hash) && attributes.first.is_a?(Array)
+                    OpenStruct.new(super()).send(attributes.flatten.first)
+                  else
+                    super.send *attributes
+                  end
+                end
+              end
+              instance_eval(&block)
+            end
+          end
+        end
+=end
         # Defines an explicit subject for an example group which can then be the
         # implicit receiver (through delegation) of calls to +should+.
         #
