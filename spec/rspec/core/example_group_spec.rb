@@ -606,7 +606,12 @@ module RSpec::Core
 
       context "with nested attributes" do
         subject do
+          class Ee < Exception ; end
           Class.new do
+            class << self
+              attr_accessor :count
+            end
+
             def name
               "John"
             end
@@ -614,12 +619,18 @@ module RSpec::Core
             def greetings(text)
               "#{text} #{name}"
             end
+
+            def create
+              self.class.count += 1
+            end
           end.new
         end
         its("name.size") { should == 4 }
         its("name.size.class") { should == Fixnum }
         its(:greetings, "Hi") { should == "Hi John"}
         its('clone.greetings', "Hello") { should == "Hello John"}
+        expects('clone_oups') { to raise_error(NoMethodError) }
+        expects('clone.greetings', "Hello", "John") { to raise_error(ArgumentError) }
       end
 
       context "when it is a Hash" do
@@ -637,6 +648,7 @@ module RSpec::Core
           it "raises a NoMethodError" do
             expect{ its(:attribute) }.to raise_error(NoMethodError)
           end
+          expects([String]) { to raise_error(TypeError) }
         end
       end
 

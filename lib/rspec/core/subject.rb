@@ -134,25 +134,32 @@ module RSpec
           end
         end
 
-=begin
-        def its(*attributes, &block)
-          description = attributes.size == 1 ? attributes.first : (attributes.first.to_s + " with arguments " + attributes[1..-1].map(&:inspect).join(', '))
-          describe(description) do
+        def expects(*attributes, &block)
+          describe("#{attributes.first} #{attributes.size > 1 ? "with arguments #{attributes[1..-1].map(&:inspect).join(', ')}" : ''}") do
             example do
               self.class.class_eval do
                 define_method(:subject) do
-                  if super.is_a?(Hash) && attributes.first.is_a?(Array)
-                    OpenStruct.new(super()).send(attributes.flatten.first)
+                  if super().is_a?(Hash) && attributes.first.is_a?(Array)
+                    lambda { OpenStruct.new(super()).send(attributes.first.first) }
                   else
-                    super.send *attributes
+                    method_chain = attributes.first.to_s.split('.')
+                    lambda do
+                      method_chain.inject(super()) do |target, method|
+                        method = [method, *attributes[1..-1]] if method_chain.last == method and attributes.size > 1
+                        target.send(*method)
+                      end
+                    end
                   end
                 end
               end
+              eval "alias_method :to, :should", block
+              eval "alias_method :to_not, :should_not", block
+  #            block.extend RSpec::Core::ExampleGroup::BlockAliases WTF11!1!!!
               instance_eval(&block)
             end
           end
         end
-=end
+
         # Defines an explicit subject for an example group which can then be the
         # implicit receiver (through delegation) of calls to +should+.
         #
